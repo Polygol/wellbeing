@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Wellbeing</title>
+    <link rel="icon" href="favicon.png" type="image/png">
+    <script src="https://polygol.github.io/assets/gurapp/api/gurasuraisu-api.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--background-color-tr);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            transition: background-color 0.3s, color 0.3s;
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+
+        .material-symbols-rounded {
+            vertical-align: middle;
+        }
+
+        /* Generic UI Elements */
+        button, .action-btn, .metric-card, .log-item {
+            transform: scale(1);
+            transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
+        }
+
+        button:active, .action-btn:active, .clickable:active {
+            transform: scale(1.05);
+            filter: brightness(1.2);
+        }
+
+        .reduce-animations button:active, .reduce-animations .clickable:active {
+            transform: scale(1) !important;
+            transition: none !important;
+        }
+
+        .toolbar.hidden {
+            display: none !important;
+        }
+
+        .date-navigator {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 800px;
+            margin: 80px auto 0 auto;
+            padding: 0 20px;
+            width: calc(100% - 40px);
+        }
+
+        .date-navigator.hidden {
+            display: none !important;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .view-container {
+            display: none;
+            flex-grow: 1;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 20px 120px 20px;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .view-container.active {
+            display: flex;
+        }
+
+        .section-title {
+            margin-bottom: 10px;
+        }
+
+        /* Dashboard Rings */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .metric-card {
+            background-color: var(--search-background);
+            border-radius: 50px;
+            corner-shape: superellipse(1.5);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--edge-refraction-filter) saturate(2) blur(2.5px);
+            box-shadow: var(--sun-shadow);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .circular-chart {
+            display: block;
+            margin: 10px auto;
+            max-width: 80%;
+            max-height: 250px;
+        }
+        .circle-bg {
+            fill: none;
+            stroke: var(--glass-border);
+            stroke-width: 3.8;
+        }
+        .circle {
+            fill: none;
+            stroke-width: 3.8;
+            stroke-linecap: round;
+            transition: stroke-dasharray 1s ease-out;
+        }
+        .percentage {
+            fill: var(--text-color);
+            font-family: 'Open Runde', sans-serif;
+            font-weight: 700;
+            font-size: 0.5em;
+            text-anchor: middle;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--secondary-text-color);
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .color-steps { stroke: #4ecdc4; }
+        .color-water { stroke: #45b7d1; }
+        .color-activity { stroke: #ff6b6b; }
+        .color-mind { stroke: #9b59b6; }
+
+        /* Quick Add Input Section */
+        .input-section {
+            display: flex;
+            background-color: var(--search-background);
+            border-radius: 50px;
+            padding: 10px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--edge-refraction-filter) saturate(2) blur(2.5px);
+            box-shadow: var(--sun-shadow);
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .quick-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.1rem;
+            outline: none;
+            padding: 10px 15px;
+        }
+
+        .action-btn {
+            background-color: var(--accent);
+            color: var(--background-color);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--sun-shadow);
+        }
+
+        .action-btn.secondary {
+            background-color: var(--search-background);
+            color: var(--text-color);
+        }
+
+        /* Wellbeing Logs */
+        .log-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .log-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background-color: var(--search-background);
+            border-radius: 25px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--edge-refraction-filter) saturate(2) blur(2.5px);
+            box-shadow: var(--sun-shadow);
+        }
+
+        .log-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .log-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: var(--overlay-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .log-details h4 {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .log-details p {
+            font-size: 0.85rem;
+            color: var(--secondary-text-color);
+        }
+
+        .log-value {
+            font-weight: 700;
+            font-family: 'Open Runde', sans-serif;
+            font-size: 1.1rem;
+        }
+
+        /* Water Grid */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--overlay-color);
+            border-radius: 5px;
+            outline: none;
+            margin: 15px 0;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: var(--sun-shadow);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.2);
+        }
+
+        /* Breathe Animation */
+        .breathe-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            position: relative;
+        }
+
+        .breathe-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle,rgba(86, 191, 209, 1) 0%, rgba(191, 227, 223, 1) 100%);
+            opacity: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+
+        .breathe-text {
+            position: absolute;
+            font-weight: 600;
+            font-family: 'Open Runde';
+            font-size: 1.2rem;
+            color: var(--text-color);
+            z-index: 10;
+        }
+
+        .breathing .breathe-circle {
+            animation: breathe-anim 8s infinite ease-in-out;
+        }
+
+        @keyframes breathe-anim {
+            0% { transform: scale(1); }
+            40% { transform: scale(2.2); opacity: 0.5; }
+            50% { transform: scale(2.2); opacity: 0.5; }
+            90% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        /* Modals */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--overlay-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(.3, 1.2, .64, 1);
+            transform: scale(0.9);
+            filter: blur(5px);
+        }
+        
+        .modal.show {
+            visibility: visible;
+            opacity: 1;
+            transition-delay: 0s;
+            transform: none;
+            filter: none;
+            border-radius: 0;
+        }
+        
+        .modal-content {
+            background-color: var(--search-background);
+            border-radius: 50px;
+            corner-shape: superellipse(1.5);
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: var(--edge-refraction-filter) saturate(2) blur(5px);
+            box-shadow: var(--sun-shadow), 0 0 50px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 0 8px;
+        }
+        
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            font-family: 'Open Runde';
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            font-size: 0.9rem;
+            color: var(--secondary-text-color);
+        }
+        
+        .form-input, .form-textarea {
+            padding: 12px 16px;
+            border-radius: 25px;
+            corner-shape: superellipse(1.5);
+            border: 1px solid var(--glass-border);
+            background-color: var(--search-background);
+            color: var(--text-color);
+            box-shadow: var(--sun-shadow);
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input[type="range"] {
+            corner-shape: round;
+        }
+
+        .form-input option {
+            background-color: var(--background-color);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .submit-btn {
+            background-color: var(--accent);
+            color: var(--background-color);
+            border: 1px solid var(--glass-border);
+            border-radius: 25px;
+            padding: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+            box-shadow: var(--sun-shadow);
+        }
+
+    </style>
+</head>
+<body data-app-name="Wellbeing">
+    
+    <!-- Navigation Toolbar -->
+    <div class="toolbar" id="main-toolbar">
+        <button class="tab-btn active" data-tab="home"><span class="material-symbols-rounded">home</span>Home</button>
+        <button class="tab-btn" data-tab="activity"><span class="material-symbols-rounded">directions_run</span>Activity</button>
+        <button class="tab-btn" data-tab="water"><span class="material-symbols-rounded">water_drop</span>Water</button>
+        <button class="tab-btn" data-tab="mind"><span class="material-symbols-rounded">psychiatry</span>Mind</button>
+    </div>
+
+    <!-- Global Date Navigator -->
+    <div class="date-navigator" id="date-navigator">
+        <button class="nav-btn" onclick="changeDate(-1)"><span class="material-symbols-rounded">chevron_left</span></button>
+        <div id="current-date-display" class="date-display">Today</div>
+        <button class="nav-btn" onclick="changeDate(1)" id="next-date-btn" disabled><span class="material-symbols-rounded">chevron_right</span></button>
+    </div>
+
+    <!-- Home Dashboard View -->
+    <div class="view-container active" id="home-view">        
+        <div class="dashboard-grid">
+            <!-- Steps -->
+            <div class="metric-card clickable" onclick="switchTab('activity')">
+                <svg viewBox="0 0 36 36" class="circular-chart color-steps">
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle" id="ring-steps" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #4ecdc4;">directions_run</text>
+                </svg>
+                <div class="metric-label">
+                    <strong id="summary-steps">0</strong> / <span id="goal-steps">10000</span><br>Steps
+                </div>
+            </div>
+
+            <!-- Water -->
+            <div class="metric-card clickable" onclick="switchTab('water')">
+                <svg viewBox="0 0 36 36" class="circular-chart color-water">
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle" id="ring-water" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #45b7d1;">water_drop</text>
+                </svg>
+                <div class="metric-label">
+                    <strong id="summary-water">0</strong> / <span id="goal-water">8</span><br>Glasses
+                </div>
+            </div>
+
+            <!-- Workouts -->
+            <div class="metric-card clickable" onclick="switchTab('activity')">
+                <svg viewBox="0 0 36 36" class="circular-chart color-activity">
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle" id="ring-activity" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #ff6b6b;">fitness_center</text>
+                </svg>
+                <div class="metric-label">
+                    <strong id="summary-workouts">0</strong> min<br>Active Time
+                </div>
+            </div>
+
+            <!-- Mindfulness -->
+            <div class="metric-card clickable" onclick="switchTab('mind')">
+                <svg viewBox="0 0 36 36" class="circular-chart color-mind">
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path class="circle" id="ring-mind" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #9b59b6;">psychiatry</text>
+                </svg>
+                <div class="metric-label">
+                    <strong id="summary-mind">0</strong> min<br>Mindful Time
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wellbeing View -->
+    <div class="view-container" id="activity-view">        
+        <div style="display: flex;align-items: stretch;gap: 16px;">
+            <button class="action-btn" onclick="openAiSetup()" style="padding: 8px 32px; border-radius: 50px; flex-shrink: 0;">
+                <span class="material-symbols-rounded">play_arrow</span> Start Now
+            </button>
+            
+            <div class="input-section" style="width: 100%;">
+                <span class="material-symbols-rounded" style="color: #4ecdc4; padding-left: 12px;">footprint</span>
+                <input type="number" id="quick-steps" class="quick-input" placeholder="Add steps">
+                <button class="action-btn" onclick="addSteps()" style="padding: 10px;"><span class="material-symbols-rounded">add</span></button>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <h2 class="section-title" style="margin: 0;">Workouts</h2>
+            <div style="display: flex; gap: 10px;">
+                <button class="action-btn" onclick="openWorkoutModal()" style="padding: 8px 15px;">
+                    <span class="material-symbols-rounded">add</span> Log
+                </button>
+            </div>
+        </div>
+
+        <div class="log-list" id="workout-list">
+            <!-- Workouts populated by JS -->
+        </div>
+    </div>
+
+    <!-- Water View -->
+    <div class="view-container" id="water-view">
+        <div class="metric-card" style="padding: 30px; margin-top: 10px;">
+            <div style="display: flex; gap: 12px; width: 100%; align-items: center;">
+                <span class="material-symbols-rounded" style="color: #45b7d1; font-size: 32px;">water_drop</span>
+                <span style="font-size: 1.5rem; font-weight: 600; font-family: 'Open Runde', sans-serif;"><span id="water-value-display">0</span> / <span id="water-goal-display">8</span></span>
+                <span>glasses</span>
+            </div>
+            <input type="range" id="water-slider" class="form-input" min="0" max="15" value="0" step="1" oninput="updateWaterFromSlider()">
+        </div>
+    </div>
+
+    <!-- Mind View -->
+    <div class="view-container" id="mind-view">
+        <div class="metric-card" style="padding: 30px; margin-top: 10px;">
+            <div style="display: flex; gap: 12px; width: 100%; align-items: center;">
+                <span class="material-symbols-rounded" style="color: #9b59b6; font-size: 32px;">mood</span>
+                <span style="font-size: 1.2rem; font-weight: 600; font-family: 'Open Runde', sans-serif;" id="mood-value-display">Neutral</span>
+            </div>
+            <input type="range" id="mood-slider" class="form-input" min="1" max="5" value="3" step="1" oninput="updateMoodFromSlider()">
+            <div style="display: flex; justify-content: space-between; width: 100%; margin-top: 10px; color: var(--secondary-text-color); font-size: 0.85rem;">
+                <span>Poor</span>
+                <span>Excellent</span>
+            </div>
+        </div>
+
+        <h2>Focus</h2>
+
+        <div class="metric-card clickable" onclick="openBreathingView()" style="padding: 30px;">
+            <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 10px;">bubble_chart</span>
+            <h3 class="section-title" style="margin-bottom: 5px;">Breathing</h3>
+            <p style="color: var(--secondary-text-color); text-align: center; font-size: 0.9rem;">Begin a breathing exercise.</p>
+        </div>
+    </div>
+
+    <!-- Breathing Subpage View -->
+    <div class="view-container" id="breathing-view" style="justify-content: center;">
+        <button class="action-btn secondary" onclick="closeBreathingView()" style="width: fit-content; margin-bottom: 20px; margin-left: auto;">
+            Done
+        </button>
+
+        <h3 class="section-title" style="text-align: center;">Breathe</h3>
+
+        <div class="breathe-container" id="breathe-container">
+            <div class="breathe-circle"></div>
+            <div class="breathe-text" id="breathe-text"></div>
+        </div>
+
+        <button class="action-btn" id="breathe-btn" style="margin: 0 auto; justify-content: center;">
+            Start
+        </button>
+    </div>
+
+    <!-- Add Workout Modal -->
+    <div class="modal" id="workout-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Log Workout</div>
+            </div>
+            <form class="modal-form" id="workout-form">
+                <div class="form-group">
+                    <label class="form-label">Wellbeing Type</label>
+                    <select class="form-input" id="workout-type">
+                        <option value="Running">Running</option>
+                        <option value="Cycling">Cycling</option>
+                        <option value="Yoga">Yoga</option>
+                        <option value="Strength">Strength Training</option>
+                        <option value="Walking">Walking</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Duration (min)</label>
+                        <input type="number" class="form-input" id="workout-duration" placeholder="30" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Calories</label>
+                        <input type="number" class="form-input" id="workout-calories" placeholder="250">
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Save Workout</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ML Workout Setup View -->
+    <div class="view-container" id="ml-setup-view" style="justify-content: center;">
+        <button class="action-btn secondary" onclick="closeAiSetup()" style="background-color: transparent; border: none; box-shadow: none; backdrop-filter: none; width: fit-content; margin-bottom: 20px;">
+            <span class="material-symbols-rounded">arrow_back</span>
+        </button>
+
+        <h1 class="section-title" style="text-align: center; margin-top: 20px;">Start an activity</h1>
+        <p style="color: var(--secondary-text-color); text-align: center; margin-bottom: 30px;">Orient the camera to face your body.</p>
+
+        <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-input" id="ml-exercise-type">
+                <option value="Squats">Squats</option>
+                <option value="Jumping Jacks">Jumping Jacks</option>
+                <option value="Push-ups">Push-ups</option>
+                <option value="Freestyle">Freestyle (General Motion)</option>
+            </select>
+        </div>
+
+        <button class="action-btn" onclick="startAiTracking()" style="width: 100%; justify-content: center;">
+            <span class="material-symbols-rounded">play_arrow</span> Start
+        </button>
+    </div>
+
+    <!-- ML Active Tracking View -->
+    <div class="view-container" id="ml-tracking-view" style="justify-content: center;max-width: none;padding: 5%;">
+        <span id="ml-tracking-status" style="font-size: 2rem;"><svg class="loading-spinner" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="currentColor" stroke="none" class="loading-spinner-ind" /></svg></span>
+
+        <video id="workout-video" style="display: none;" playsinline></video>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div style="padding: 30px 15px;">
+                <span class="material-symbols-rounded" style="color: #6b93ff; font-size: 72px; margin-bottom: 10px;">directions_run</span>
+                <div style="font-size: 10rem; font-weight: bold; font-family: 'Inter Numeric', sans-serif;" id="rep-count">0</div>
+                <div style="font-size: 5rem; color: var(--secondary-text-color);" id="rep-label">Movements</div>
+            </div>
+            <div style="padding: 30px 15px;">
+                <span class="material-symbols-rounded" style="color: #fca311; font-size: 72px; margin-bottom: 10px;">local_fire_department</span>
+                <div style="font-size: 10rem; font-weight: bold; font-family: 'Inter Numeric', sans-serif;" id="rep-cals">0</div>
+                <div style="font-size: 5rem; color: var(--secondary-text-color);">Calories</div>
+            </div>
+        </div>
+
+        <button class="action-btn" onclick="finishCameraWorkout()" style="position: fixed; top: 25px; right: 25px; background-color: #ff6b6b;">
+            <span class="material-symbols-rounded">stop</span> Finish
+        </button>
+    </div>
+
+    <script>
+        // --- State Management & Date Logic ---
+        let currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+
+        function formatDateKey(date) {
+            return date.toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+
+        const DEFAULT_STATE = {
+            steps: 0, goalSteps: 10000,
+            water: 0, goalWater: 8,
+            workouts:[], mindfulMinutes: 0, mood: 3
+        };
+
+        let allData = JSON.parse(localStorage.getItem('Wellbeing_all_data')) || {};
+        let appData = null; // Will point to currently viewed day's data
+
+        // Migration from old data structure if exists
+        const oldData = JSON.parse(localStorage.getItem('Wellbeing_data'));
+        if (oldData && oldData.date) {
+            const parts = oldData.date.split('/'); // Simplistic conversion attempt
+            if (parts.length === 3) {
+                const oldDateKey = new Date(oldData.date).toISOString().split('T')[0];
+                if (!allData[oldDateKey]) allData[oldDateKey] = oldData;
+            }
+            localStorage.removeItem('Wellbeing_data');
+        }
+
+        function loadDataForDate(date) {
+            const key = formatDateKey(date);
+            if (!allData[key]) {
+                allData[key] = { ...DEFAULT_STATE, workouts:[] };
+            }
+            appData = allData[key];
+            
+            // Update Date Display
+            const todayKey = formatDateKey(new Date());
+            const display = document.getElementById('current-date-display');
+            const nextBtn = document.getElementById('next-date-btn');
+            
+            if (key === todayKey) {
+                display.textContent = 'Today';
+                nextBtn.disabled = true;
+            } else {
+                display.textContent = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                nextBtn.disabled = false;
+            }
+            
+            updateDashboard();
+            renderWorkouts();
+            updateWaterUI();
+            updateMoodUI();
+        }
+
+        function changeDate(offset) {
+            currentDate.setDate(currentDate.getDate() + offset);
+            loadDataForDate(currentDate);
+        }
+
+        function saveData() {
+            const key = formatDateKey(currentDate);
+            allData[key] = appData;
+            localStorage.setItem('Wellbeing_all_data', JSON.stringify(allData));
+            updateDashboard();
+        }
+
+        // --- Navigation ---
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const viewContainers = document.querySelectorAll('.view-container');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchTab(btn.dataset.tab);
+            });
+        });
+
+        function switchTab(tabId) {
+            tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+            viewContainers.forEach(v => v.classList.toggle('active', v.id === `${tabId}-view`));
+            
+            // Reset breathing state if navigating away
+            if (tabId !== 'breathing' && isBreathing) {
+                document.getElementById('breathe-btn').click();
+            }
+
+            if(tabId === 'water') updateWaterUI();
+            if(tabId === 'mind') updateMoodUI();
+            if(tabId === 'activity') renderWorkouts();
+        }
+
+        // --- Subpage Navigation ---
+        function openBreathingView() {
+            viewContainers.forEach(v => v.classList.remove('active'));
+            document.getElementById('breathing-view').classList.add('active');
+            document.getElementById('main-toolbar').classList.add('hidden');
+            document.getElementById('date-navigator').classList.add('hidden');
+        }
+
+        function closeBreathingView() {
+            document.getElementById('main-toolbar').classList.remove('hidden');
+            document.getElementById('date-navigator').classList.remove('hidden');
+            switchTab('mind');
+        }
+
+        // --- ML Camera Workout ---
+        let workoutPose;
+        let workoutCamera;
+        let exerciseState = 0;
+        let repCount = 0;
+        let totalCals = 0;
+        let workoutStartTime = null;
+        let currentAiExercise = 'Squats';
+        let previousLandmarks = null;
+        let motionScore = 0;
+
+        function openAiSetup() {
+            viewContainers.forEach(v => v.classList.remove('active'));
+            document.getElementById('ml-setup-view').classList.add('active');
+            document.getElementById('main-toolbar').classList.add('hidden');
+            document.getElementById('date-navigator').classList.add('hidden');
+        }
+
+        function closeAiSetup() {
+            document.getElementById('main-toolbar').classList.remove('hidden');
+            document.getElementById('date-navigator').classList.remove('hidden');
+            switchTab('activity');
+        }
+
+        function startAiTracking() {
+            currentAiExercise = document.getElementById('ml-exercise-type').value;
+            
+            // Switch Views
+            viewContainers.forEach(v => v.classList.remove('active'));
+            document.getElementById('ml-tracking-view').classList.add('active');
+            
+            // Reset Stats
+            repCount = 0;
+            totalCals = 0;
+            exerciseState = 0;
+            motionScore = 0;
+            previousLandmarks = null;
+            workoutStartTime = new Date();
+            
+            // Update UI Labels
+            document.getElementById('rep-label').textContent = currentAiExercise === 'Freestyle' ? 'Wellbeing Score' : 'Reps';
+            document.getElementById('rep-count').textContent = '0';
+            document.getElementById('rep-cals').textContent = '0';
+
+            initMediaPipe();
+        }
+
+        function initMediaPipe() {
+            if(workoutPose && workoutCamera) {
+                workoutCamera.start();
+                return;
+            }
+
+            const videoElement = document.getElementById('workout-video');
+
+            workoutPose = new Pose({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            }});
+
+            workoutPose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: false,
+                smoothSegmentation: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            workoutPose.onResults((results) => {
+                document.getElementById('ml-tracking-status').textContent = 'Wellbeing';
+                
+                if (results.poseLandmarks) {
+                    analyzePose(results.poseLandmarks);
+                }
+            });
+
+            workoutCamera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await workoutPose.send({image: videoElement});
+                },
+                width: 480,
+                height: 640
+            });
+            workoutCamera.start();
+        }
+
+        function analyzePose(landmarks) {
+            if (currentAiExercise === 'Squats') detectSquats(landmarks);
+            else if (currentAiExercise === 'Jumping Jacks') detectJumpingJacks(landmarks);
+            else if (currentAiExercise === 'Push-ups') detectPushups(landmarks);
+            else if (currentAiExercise === 'Freestyle') detectFreestyle(landmarks);
+        }
+
+        function incrementRep(calFactor) {
+            repCount++;
+            totalCals += calFactor;
+            document.getElementById('rep-count').textContent = repCount;
+            document.getElementById('rep-cals').textContent = Math.round(totalCals);
+        }
+
+        function detectSquats(landmarks) {
+            const leftHip = landmarks[23];
+            const leftKnee = landmarks[25];
+            if (!leftHip || !leftKnee || leftHip.visibility < 0.5 || leftKnee.visibility < 0.5) return;
+
+            const dist = leftKnee.y - leftHip.y;
+            if (dist < 0.1 && exerciseState === 0) {
+                exerciseState = 1;
+            } else if (dist > 0.2 && exerciseState === 1) {
+                exerciseState = 0;
+                incrementRep(0.32);
+            }
+        }
+
+        function detectJumpingJacks(landmarks) {
+            const lWrist = landmarks[15];
+            const rWrist = landmarks[16];
+            const nose = landmarks[0];
+            if (!lWrist || !rWrist || !nose || lWrist.visibility < 0.5 || rWrist.visibility < 0.5) return;
+
+            const wristY = (lWrist.y + rWrist.y) / 2;
+            if (wristY < nose.y && exerciseState === 0) {
+                exerciseState = 1;
+            } else if (wristY > nose.y + 0.2 && exerciseState === 1) {
+                exerciseState = 0;
+                incrementRep(0.2);
+            }
+        }
+
+        function detectPushups(landmarks) {
+            const shoulder = landmarks[11];
+            const wrist = landmarks[15];
+            if (!shoulder || !wrist || shoulder.visibility < 0.5 || wrist.visibility < 0.5) return;
+
+            const dist = wrist.y - shoulder.y;
+            if (dist < 0.15 && exerciseState === 0) {
+                exerciseState = 1;
+            } else if (dist > 0.3 && exerciseState === 1) {
+                exerciseState = 0;
+                incrementRep(0.4);
+            }
+        }
+
+        function detectFreestyle(landmarks) {
+            if (previousLandmarks) {
+                let movement = 0;
+                const points =[15, 16, 27, 28]; // Wrists and ankles
+                points.forEach(p => {
+                    if (landmarks[p].visibility > 0.5 && previousLandmarks[p].visibility > 0.5) {
+                        const dx = landmarks[p].x - previousLandmarks[p].x;
+                        const dy = landmarks[p].y - previousLandmarks[p].y;
+                        movement += Math.sqrt(dx * dx + dy * dy);
+                    }
+                });
+                if (movement > 0.05) {
+                    motionScore += movement;
+                    if (motionScore > 5) {
+                        incrementRep(0.5);
+                        motionScore = 0;
+                    }
+                }
+            }
+            // Deep copy to prevent reference mutation
+            previousLandmarks = JSON.parse(JSON.stringify(landmarks.map(l => ({x: l.x, y: l.y, visibility: l.visibility}))));
+        }
+
+        function closeCameraWorkout() {
+            if (workoutCamera) workoutCamera.stop();
+            document.getElementById('main-toolbar').classList.remove('hidden');
+            document.getElementById('date-navigator').classList.remove('hidden');
+            switchTab('activity');
+        }
+
+        function finishCameraWorkout() {
+            if (repCount > 0) {
+                const endTime = new Date();
+                const durationMins = Math.max(1, Math.round((endTime - workoutStartTime) / 60000));
+                const finalCals = Math.round(totalCals);
+
+                appData.workouts.push({
+                    id: Date.now(),
+                    type: `${currentAiExercise}`,
+                    duration: durationMins,
+                    calories: finalCals,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+
+                // Convert exercise intensity to step equivalent for the ring
+                if (currentAiExercise === 'Freestyle') {
+                    appData.steps += (repCount * 10);
+                } else {
+                    appData.steps += (repCount * 5);
+                }
+
+                saveData();
+                renderWorkouts();
+                Gurasuraisu.showPopup(`Saved ${currentAiExercise} workout`);
+            }
+
+            // Restore system UI
+            document.getElementById('main-toolbar').classList.remove('hidden');
+            document.getElementById('date-navigator').classList.remove('hidden');
+            switchTab('activity');
+        }
+
+        // --- Dashboard Logic ---
+        function setRingProgress(elementId, value, goal) {
+            const ring = document.getElementById(elementId);
+            const percentage = Math.min((value / goal) * 100, 100);
+            ring.setAttribute('stroke-dasharray', `${percentage}, 100`);
+        }
+
+        function updateDashboard() {
+            // Update texts
+            document.getElementById('summary-steps').textContent = appData.steps.toLocaleString();
+            document.getElementById('goal-steps').textContent = appData.goalSteps.toLocaleString();
+            document.getElementById('summary-water').textContent = appData.water;
+            document.getElementById('goal-water').textContent = appData.goalWater;
+            
+            const activeMins = appData.workouts.reduce((acc, curr) => acc + parseInt(curr.duration), 0);
+            document.getElementById('summary-workouts').textContent = activeMins;
+            document.getElementById('summary-mind').textContent = appData.mindfulMinutes;
+
+            // Update rings (delay slightly for animation effect on load)
+            setTimeout(() => {
+                setRingProgress('ring-steps', appData.steps, appData.goalSteps);
+                setRingProgress('ring-water', appData.water, appData.goalWater);
+                setRingProgress('ring-activity', activeMins, 30); // Goal: 30 mins active time
+                setRingProgress('ring-mind', appData.mindfulMinutes, 10); // Goal: 10 mins mindful
+            }, 100);
+        }
+
+        // --- Wellbeing Logic ---
+        function addSteps() {
+            const input = document.getElementById('quick-steps');
+            const val = parseInt(input.value);
+            if (val > 0) {
+                appData.steps += val;
+                saveData();
+                input.value = '';
+                Gurasuraisu.showPopup('Saved')
+            }
+        }
+
+        const workoutModal = document.getElementById('workout-modal');
+        const workoutForm = document.getElementById('workout-form');
+
+        function openWorkoutModal() {
+            workoutModal.classList.add('show');
+        }
+
+        function closeWorkoutModal() {
+            workoutModal.classList.remove('show');
+            workoutForm.reset();
+        }
+
+        // Close modal when clicking outside
+        workoutModal.addEventListener('click', (e) => {
+            if (e.target === workoutModal) {
+                closeWorkoutModal();
+            }
+        });
+
+        // Prevent propagation when clicking modal content
+        workoutModal.querySelector('.modal-content').addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Handle workout submission
+        workoutForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const type = document.getElementById('workout-type').value;
+            const duration = document.getElementById('workout-duration').value;
+            const cals = document.getElementById('workout-calories').value;
+
+            if (duration && parseInt(duration) > 0) {
+                appData.workouts.push({
+                    id: Date.now(),
+                    type,
+                    duration: parseInt(duration),
+                    calories: cals ? parseInt(cals) : null,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+
+                saveData();
+                renderWorkouts();
+                Gurasuraisu.showPopup(`Logged ${type}`);
+                closeWorkoutModal();
+            }
+        });
+
+        function renderWorkouts() {
+            const list = document.getElementById('workout-list');
+            if (appData.workouts.length === 0) {
+                list.innerHTML = `<div style="text-align:center; color:var(--secondary-text-color); padding: 20px;">No workouts logged.</div>`;
+                return;
+            }
+
+            const icons = {
+                'Running': 'directions_run', 'Cycling': 'directions_bike', 'Yoga': 'psychiatry',
+                'Strength': 'fitness_center', 'Walking': 'directions_walk', 'Other': 'sports', 'Squats (ML)': 'videocam'
+            };
+
+            list.innerHTML = [...appData.workouts].reverse().map(w => `
+                <div class="log-item">
+                    <div class="log-info">
+                        <div class="log-icon"><span class="material-symbols-rounded">${icons[w.type] || 'sports'}</span></div>
+                        <div class="log-details">
+                            <h4>${w.type}</h4>
+                            <p>${w.time}</p>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div class="log-value">${w.duration} min</div>
+                        ${w.calories ? `<div style="font-size:0.8rem; color:var(--secondary-text-color);">${w.calories} kcal</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- Water Logic ---
+        function updateWaterUI() {
+            const slider = document.getElementById('water-slider');
+            const display = document.getElementById('water-value-display');
+            const goalDisplay = document.getElementById('water-goal-display');
+            if (slider && display) {
+                slider.max = Math.max(appData.goalWater * 2, 15); // Allow exceeding goal
+                slider.value = appData.water || 0;
+                display.textContent = appData.water || 0;
+                goalDisplay.textContent = appData.goalWater;
+            }
+        }
+
+        function updateWaterFromSlider() {
+            const slider = document.getElementById('water-slider');
+            appData.water = parseInt(slider.value);
+            document.getElementById('water-value-display').textContent = appData.water;
+            saveData();
+            
+            if (appData.water === appData.goalWater) {
+                Gurasuraisu.showPopup("Hydration goal reached");
+            }
+        }
+
+        // --- Mind Logic ---
+        const moodLabels = { 1: "Poor", 2: "Fair", 3: "Neutral", 4: "Good", 5: "Excellent" };
+
+        function updateMoodUI() {
+            const slider = document.getElementById('mood-slider');
+            const display = document.getElementById('mood-value-display');
+            if (slider && display) {
+                slider.value = appData.mood || 3;
+                display.textContent = moodLabels[slider.value];
+            }
+        }
+
+        function updateMoodFromSlider() {
+            const slider = document.getElementById('mood-slider');
+            appData.mood = parseInt(slider.value);
+            const display = document.getElementById('mood-value-display');
+            display.textContent = moodLabels[appData.mood];
+            saveData();
+        }
+
+        let breathingInterval;
+        let isBreathing = false;
+
+        document.getElementById('breathe-btn').addEventListener('click', () => {
+            const container = document.getElementById('breathe-container');
+            const text = document.getElementById('breathe-text');
+            const btn = document.getElementById('breathe-btn');
+
+            if (!isBreathing) {
+                // Start
+                isBreathing = true;
+                container.classList.add('breathing');
+                btn.textContent = 'Stop';
+                btn.classList.add('secondary');
+                
+                let cycle = 0;
+                text.textContent = 'Inhale...';
+                
+                breathingInterval = setInterval(() => {
+                    cycle++;
+                    if (cycle % 2 === 0) {
+                        text.textContent = 'Inhale...';
+                    } else {
+                        text.textContent = 'Exhale...';
+                    }
+                    
+                    // Log a mindful minute every 7.5 cycles (~1 min at 8s per cycle)
+                    if (cycle % 8 === 0) {
+                        appData.mindfulMinutes++;
+                        saveData();
+                    }
+                }, 4000); // Half of the 8s CSS animation
+
+            } else {
+                // Stop
+                isBreathing = false;
+                container.classList.remove('breathing');
+                clearInterval(breathingInterval);
+                text.textContent = 'Start';
+                btn.textContent = 'Begin';
+                btn.classList.remove('secondary');
+            }
+        });
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDataForDate(currentDate);
+        });
+    </script>
+</body>
+</html>
