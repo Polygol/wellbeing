@@ -705,7 +705,7 @@
         // Migration from old data structure if exists
         const oldData = JSON.parse(localStorage.getItem('Wellbeing_data'));
         if (oldData && oldData.date) {
-            const parts = oldData.date.split('/'); // Simplistic conversion attempt
+            const parts = oldData.date.split('./'); // Simplistic conversion attempt
             if (parts.length === 3) {
                 const oldDateKey = new Date(oldData.date).toISOString().split('T')[0];
                 if (!allData[oldDateKey]) allData[oldDateKey] = oldData;
