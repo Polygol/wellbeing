@@ -3,9 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Wellbeing</title>
+    <title data-lang-key="TITLE">Wellbeing</title>
+    <script src="lang.js">
+        // --- Internationalization (i18n) Support ---
+        function getAppLanguage() {
+            let l = (localStorage.getItem('language') || localStorage.getItem('selectedLanguage') || 'EN').toUpperCase();
+            if (l === 'JA') l = 'JP';
+            return ['EN', 'JP', 'KO', 'ZH'].includes(l) ? l : 'EN';
+        }
+
+        function t(key, params = {}) {
+            const lang = getAppLanguage();
+            const dict = window['LANG_' + lang + '_WELLBEING'] || window['LANG_EN_WELLBEING'] || {};
+            let str = dict[key] || key;
+            Object.keys(params).forEach(p => {
+                str = str.replace(new RegExp('\\{' + p + '\\}', 'g'), params[p]);
+            });
+            return str;
+        }
+
+        function applyLanguage(langCode) {
+            if (langCode) localStorage.setItem('language', langCode);
+            const lang = getAppLanguage();
+            const bcpMap = { EN: 'en-US', JP: 'ja-JP', KO: 'ko-KR', ZH: 'zh-CN' };
+            document.documentElement.lang = bcpMap[lang] || 'en-US';
+            document.querySelectorAll('[data-lang-key]').forEach(el => {
+                const k = el.getAttribute('data-lang-key');
+                if (k) {
+                    if (el.tagName === 'TITLE') {
+                        document.title = t(k);
+                    } else {
+                        el.textContent = t(k);
+                    }
+                }
+            });
+            document.querySelectorAll('[data-lang-placeholder]').forEach(el => {
+                const k = el.getAttribute('data-lang-placeholder');
+                if (k) el.placeholder = t(k);
+            });
+            document.querySelectorAll('[data-lang-title]').forEach(el => {
+                const k = el.getAttribute('data-lang-title');
+                if (k) el.title = t(k);
+            });
+            if (typeof onLanguageChanged === 'function') {
+                onLanguageChanged(lang);
+            }
+        }
+
+        window.addEventListener('message', (e) => {
+            if (e.data && (e.data.type === 'languageUpdate' || e.data.type === 'localeUpdate')) {
+                applyLanguage(e.data.languageCode);
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => applyLanguage());
+        
+
+    </script>
     <link rel="icon" href="favicon.png" type="image/png">
-    <script src="https://polygol.github.io/assets/gurapp/api/gurasuraisu-api.js" defer></script>
+    <script src="https://polygol.github.io/assets/polygolapp/api/polygol-api.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
@@ -454,16 +510,16 @@
     
     <!-- Navigation Toolbar -->
     <div class="toolbar" id="main-toolbar">
-        <button class="tab-btn active" data-tab="home"><span class="material-symbols-rounded">home</span>Home</button>
-        <button class="tab-btn" data-tab="activity"><span class="material-symbols-rounded">directions_run</span>Activity</button>
-        <button class="tab-btn" data-tab="water"><span class="material-symbols-rounded">water_drop</span>Water</button>
-        <button class="tab-btn" data-tab="mind"><span class="material-symbols-rounded">psychiatry</span>Mind</button>
+        <button class="tab-btn active" data-tab="home"><span class="material-symbols-rounded">home</span><span data-lang-key="HOME">Home</span></button>
+        <button class="tab-btn" data-tab="activity"><span class="material-symbols-rounded">directions_run</span><span data-lang-key="ACTIVITY">Activity</span></button>
+        <button class="tab-btn" data-tab="water"><span class="material-symbols-rounded">water_drop</span><span data-lang-key="WATER">Water</span></button>
+        <button class="tab-btn" data-tab="mind"><span class="material-symbols-rounded">psychiatry</span><span data-lang-key="MIND">Mind</span></button>
     </div>
 
     <!-- Global Date Navigator -->
     <div class="date-navigator" id="date-navigator">
         <button class="nav-btn" onclick="changeDate(-1)"><span class="material-symbols-rounded">chevron_left</span></button>
-        <div id="current-date-display" class="date-display">Today</div>
+        <div id="current-date-display" class="date-display" data-lang-key="TODAY">Today</div>
         <button class="nav-btn" onclick="changeDate(1)" id="next-date-btn" disabled><span class="material-symbols-rounded">chevron_right</span></button>
     </div>
 
@@ -478,7 +534,7 @@
                     <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #4ecdc4;">directions_run</text>
                 </svg>
                 <div class="metric-label">
-                    <strong id="summary-steps">0</strong> / <span id="goal-steps">10000</span><br>Steps
+                    <strong id="summary-steps">0</strong> / <span id="goal-steps">10000</span><br><span data-lang-key="STEPS">Steps</span>
                 </div>
             </div>
 
@@ -490,7 +546,7 @@
                     <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #45b7d1;">water_drop</text>
                 </svg>
                 <div class="metric-label">
-                    <strong id="summary-water">0</strong> / <span id="goal-water">8</span><br>Glasses
+                    <strong id="summary-water">0</strong> / <span id="goal-water">8</span><br><span data-lang-key="GLASSES">Glasses</span>
                 </div>
             </div>
 
@@ -502,7 +558,7 @@
                     <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #ff6b6b;">fitness_center</text>
                 </svg>
                 <div class="metric-label">
-                    <strong id="summary-workouts">0</strong> min<br>Active Time
+                    <strong id="summary-workouts">0</strong> min<br><span data-lang-key="ACTIVE_TIME">Active Time</span>
                 </div>
             </div>
 
@@ -514,7 +570,7 @@
                     <text x="18" y="24.1" class="percentage material-symbols-rounded" style="font-size: 12px; fill: #9b59b6;">psychiatry</text>
                 </svg>
                 <div class="metric-label">
-                    <strong id="summary-mind">0</strong> min<br>Mindful Time
+                    <strong id="summary-mind">0</strong> min<br><span data-lang-key="MINDFUL_TIME">Mindful Time</span>
                 </div>
             </div>
         </div>
@@ -524,18 +580,18 @@
     <div class="view-container" id="activity-view">        
         <div style="display: flex;align-items: stretch;gap: 16px;">
             <button class="action-btn" onclick="openAiSetup()" style="padding: 8px 32px; border-radius: 50px; flex-shrink: 0;">
-                <span class="material-symbols-rounded">play_arrow</span> Start Now
+                <span class="material-symbols-rounded">play_arrow</span> <span data-lang-key="START_NOW">Start Now</span>
             </button>
             
             <div class="input-section" style="width: 100%;">
                 <span class="material-symbols-rounded" style="color: #4ecdc4; padding-left: 12px;">footprint</span>
-                <input type="number" id="quick-steps" class="quick-input" placeholder="Add steps">
+                <input type="number" id="quick-steps" class="quick-input" data-lang-placeholder="ADD_STEPS" placeholder="Add steps">
                 <button class="action-btn" onclick="addSteps()" style="padding: 10px;"><span class="material-symbols-rounded">add</span></button>
             </div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-            <h2 class="section-title" style="margin: 0;">Workouts</h2>
+            <h2 class="section-title" style="margin: 0;" data-lang-key="WORKOUTS">Workouts</h2>
             <div style="display: flex; gap: 10px;">
                 <button class="action-btn" onclick="openWorkoutModal()" style="padding: 8px 15px;">
                     <span class="material-symbols-rounded">add</span> Log
@@ -985,7 +1041,7 @@
 
                 saveData();
                 renderWorkouts();
-                Gurasuraisu.showPopup(`Saved ${currentAiExercise} workout`);
+                Polygol.showPopup(`Saved ${currentAiExercise} workout`);
             }
 
             // Restore system UI
@@ -1029,7 +1085,7 @@
                 appData.steps += val;
                 saveData();
                 input.value = '';
-                Gurasuraisu.showPopup('Saved')
+                Polygol.showPopup('Saved')
             }
         }
 
@@ -1075,7 +1131,7 @@
 
                 saveData();
                 renderWorkouts();
-                Gurasuraisu.showPopup(`Logged ${type}`);
+                Polygol.showPopup(`Logged ${type}`);
                 closeWorkoutModal();
             }
         });
@@ -1129,7 +1185,7 @@
             saveData();
             
             if (appData.water === appData.goalWater) {
-                Gurasuraisu.showPopup("Hydration goal reached");
+                Polygol.showPopup("Hydration goal reached");
             }
         }
 
