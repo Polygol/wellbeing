@@ -6,6 +6,8 @@
     <title data-lang-key="TITLE">Wellbeing</title>
     <script src="lang.js"></script>
     <script>
+        const bcpMap = { EN: 'en-US', JP: 'ja-JP', KO: 'ko-KR', ZH: 'zh-CN' };
+        window.bcpMap = bcpMap;
         function onLanguageChanged(lang) {
             if (typeof currentDate !== 'undefined' && typeof loadDataForDate === 'function') {
                 loadDataForDate(currentDate);
@@ -752,6 +754,7 @@
     </div>
 
     <script>
+        const bcpMap = window.bcpMap || { EN: 'en-US', JP: 'ja-JP', KO: 'ko-KR', ZH: 'zh-CN' };
         // --- State Management & Date Logic ---
         let currentDate = new Date();
         currentDate.setHours(0, 0, 0, 0);
@@ -796,7 +799,7 @@
                 display.textContent = t('TODAY');
                 nextBtn.disabled = true;
             } else {
-                display.textContent = date.toLocaleDateString(bcpMap[getAppLanguage()] || 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                display.textContent = date.toLocaleDateString((window.bcpMap || bcpMap)[getAppLanguage()] || 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 nextBtn.disabled = false;
             }
             
@@ -1040,7 +1043,7 @@
                     type: `${currentAiExercise}`,
                     duration: durationMins,
                     calories: finalCals,
-                    time: new Date().toLocaleTimeString(bcpMap[getAppLanguage()] || 'en-US', { hour: '2-digit', minute: '2-digit' })
+                    time: new Date().toLocaleTimeString((window.bcpMap || bcpMap)[getAppLanguage()] || 'en-US', { hour: '2-digit', minute: '2-digit' })
                 });
 
                 // Convert exercise intensity to step equivalent for the ring
@@ -1137,7 +1140,7 @@
                     type,
                     duration: parseInt(duration),
                     calories: cals ? parseInt(cals) : null,
-                    time: new Date().toLocaleTimeString(bcpMap[getAppLanguage()] || 'en-US', { hour: '2-digit', minute: '2-digit' })
+                    time: new Date().toLocaleTimeString((window.bcpMap || bcpMap)[getAppLanguage()] || 'en-US', { hour: '2-digit', minute: '2-digit' })
                 });
 
                 saveData();
