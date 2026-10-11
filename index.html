@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title data-lang-key="TITLE">Wellbeing</title>
-    <script src="lang.js">
+    <script src="lang.js"></script>
+    <script>
+        function onLanguageChanged(lang) {
+            if (typeof currentDate !== 'undefined' && typeof loadDataForDate === 'function') {
+                loadDataForDate(currentDate);
+            }
+        }
+
         // --- Internationalization (i18n) Support ---
         function getAppLanguage() {
             let l = (localStorage.getItem('language') || localStorage.getItem('selectedLanguage') || 'EN').toUpperCase();
@@ -56,9 +63,13 @@
             }
         });
 
-        window.addEventListener('DOMContentLoaded', () => applyLanguage());
-        
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'language' || e.key === 'selectedLanguage') {
+                applyLanguage(e.newValue);
+            }
+        });
 
+        window.addEventListener('DOMContentLoaded', () => applyLanguage());
     </script>
     <link rel="icon" href="favicon.png" type="image/png">
     <script src="https://polygol.github.io/assets/polygolapp/api/polygol-api.js" defer></script>
@@ -782,10 +793,10 @@
             const nextBtn = document.getElementById('next-date-btn');
             
             if (key === todayKey) {
-                display.textContent = 'Today';
+                display.textContent = t('TODAY');
                 nextBtn.disabled = true;
             } else {
-                display.textContent = date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+                display.textContent = date.toLocaleDateString(bcpMap[getAppLanguage()] || 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                 nextBtn.disabled = false;
             }
             
@@ -1029,7 +1040,7 @@
                     type: `${currentAiExercise}`,
                     duration: durationMins,
                     calories: finalCals,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    time: new Date().toLocaleTimeString(bcpMap[getAppLanguage()] || 'en-US', { hour: '2-digit', minute: '2-digit' })
                 });
 
                 // Convert exercise intensity to step equivalent for the ring
@@ -1041,7 +1052,7 @@
 
                 saveData();
                 renderWorkouts();
-                Polygol.showPopup(`Saved ${currentAiExercise} workout`);
+                Polygol.showPopup(t('SAVED_WORKOUT', {exercise: currentAiExercise}));
             }
 
             // Restore system UI
@@ -1085,7 +1096,7 @@
                 appData.steps += val;
                 saveData();
                 input.value = '';
-                Polygol.showPopup('Saved')
+                Polygol.showPopup(t('SAVED'))
             }
         }
 
@@ -1126,12 +1137,12 @@
                     type,
                     duration: parseInt(duration),
                     calories: cals ? parseInt(cals) : null,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    time: new Date().toLocaleTimeString(bcpMap[getAppLanguage()] || 'en-US', { hour: '2-digit', minute: '2-digit' })
                 });
 
                 saveData();
                 renderWorkouts();
-                Polygol.showPopup(`Logged ${type}`);
+                Polygol.showPopup(t('LOGGED_TYPE', {type: type}));
                 closeWorkoutModal();
             }
         });

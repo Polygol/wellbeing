@@ -1,4 +1,4 @@
-const LANG_EN_WELLBEING = {
+window.LANG_EN_WELLBEING = {
     TITLE: "Wellbeing",
     HOME: "Home",
     ACTIVITY: "Activity",
@@ -20,10 +20,14 @@ const LANG_EN_WELLBEING = {
     EXHALE: "Exhale",
     CLOSE: "Close",
     SAVE: "Save",
-    MINUTES: "min"
+    MINUTES: "min",
+    SAVED: "Saved",
+    SAVED_WORKOUT: "Saved {exercise} workout",
+    LOGGED_TYPE: "Logged {type}",
+    HYDRATION_GOAL_REACHED: "Hydration goal reached",
 };
 
-const LANG_JP_WELLBEING = {
+window.LANG_JP_WELLBEING = {
     TITLE: "Wellbeing",
     HOME: "ホーム",
     ACTIVITY: "アクティビティ",
@@ -45,10 +49,14 @@ const LANG_JP_WELLBEING = {
     EXHALE: "吐く",
     CLOSE: "閉じる",
     SAVE: "保存",
-    MINUTES: "分"
+    MINUTES: "分",
+    SAVED: "保存しました",
+    SAVED_WORKOUT: "{exercise}ワークアウトを保存しました",
+    LOGGED_TYPE: "{type}を記録しました",
+    HYDRATION_GOAL_REACHED: "水分補給の目標を達成しました",
 };
 
-const LANG_KO_WELLBEING = {
+window.LANG_KO_WELLBEING = {
     TITLE: "Wellbeing",
     HOME: "홈",
     ACTIVITY: "활동",
@@ -70,10 +78,14 @@ const LANG_KO_WELLBEING = {
     EXHALE: "숨 내쉬기",
     CLOSE: "닫기",
     SAVE: "저장",
-    MINUTES: "분"
+    MINUTES: "분",
+    SAVED: "저장됨",
+    SAVED_WORKOUT: "{exercise} 운동이 저장되었습니다",
+    LOGGED_TYPE: "{type} 기록됨",
+    HYDRATION_GOAL_REACHED: "수분 섭취 목표 달성",
 };
 
-const LANG_ZH_WELLBEING = {
+window.LANG_ZH_WELLBEING = {
     TITLE: "Wellbeing",
     HOME: "主页",
     ACTIVITY: "活动",
@@ -95,5 +107,14 @@ const LANG_ZH_WELLBEING = {
     EXHALE: "呼气",
     CLOSE: "关闭",
     SAVE: "保存",
-    MINUTES: "分钟"
+    MINUTES: "分钟",
+    SAVED: "已保存",
+    SAVED_WORKOUT: "已保存 {exercise} 训练",
+    LOGGED_TYPE: "已记录 {type}",
+    HYDRATION_GOAL_REACHED: "已达成饮水目标",
 };
+
+var LANG_EN_WELLBEING = window.LANG_EN_WELLBEING;
+var LANG_JP_WELLBEING = window.LANG_JP_WELLBEING;
+var LANG_KO_WELLBEING = window.LANG_KO_WELLBEING;
+var LANG_ZH_WELLBEING = window.LANG_ZH_WELLBEING;
